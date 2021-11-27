@@ -7,43 +7,56 @@
 #    http://shiny.rstudio.com/
 #
 
-library(shiny)
+# Loading packages
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(rsconnect)
+library(shinyWidgets)
 
-# Define UI for application that draws a histogram
-ui <- fluidPage(
+# Get the Data
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
+cocktails <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-26/cocktails.csv')
 
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
+# UI
 
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
+ui = fluidPage(
+    titlePanel("Barman App"),
+    setBackgroundColor("ghostwhite"),
+    
+    sidebarPanel(
+        # Menu for drink type
+        selectInput(inputId = "drink_type", "Drink", choices = sort(unique(cocktails$drink)))
+    ),
+    # Plotting the quantity of each ingredient
+    mainPanel(
+        tabsetPanel(
+            tabPanel("Recipe", plotOutput("ingredient"),
+            img(src = "barman.png", height = 250, width = 400, style="display: block; margin-left: auto; margin-right: auto;")
         )
     )
+    
+)
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
+# Server
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+server = function(input, output) {
+    # Filtering by drink
+    cocktails_subset <- reactive({
+        cocktails %>%
+            filter(drink == input$drink_type)
+    })
+    
+    # Plotting the ingredients using barchart
+    output$ingredient <- renderPlot({
+        
+        ggplot(data = cocktails_subset(), aes(x = ingredient, y= ingredient_number, fill = ingredient)) + 
+            geom_col(alpha=0.3, width= 0.7)+ scale_color_brewer(palette="Dark2") + theme_base()+
+            labs(x = "Ingredient ", title = "Drink's Ingredients")
     })
 }
 
-# Run the application 
+
 shinyApp(ui = ui, server = server)
+
